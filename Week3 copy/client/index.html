@@ -8,7 +8,7 @@
     
 </head>
 <body>
-    <h1>Welcome to SocketIO Server</h1>
+    <h1>Asteroid Avoidance, login and play</h1>
     <br>
     <div id=signInDiv>
         <span id="err" style="color:red; font-family: Arial, Helvetica, sans-serif;
@@ -23,11 +23,15 @@
     <div id="gameDiv" style="display:none;">
         <canvas id = "canvas" width = "800" height = "600"
         style = "border:1px solid black"></canvas>
+        <form method="#" action="#" class="highscore">
+            <input type="text" placeholder="Enter your name for High Score" style="position:absolute; left:300px; top:400px; width:200px;" />
+            <button style="position:absolute; left:350px; top:450px; width:100px;">Submit</button>
+        </form>
         <!--<button onClick="msg()">Send</button>-->
             <!--Form for chat-->
             <div id="chat-text"
                 style="width:500px; height:500px; overflow-y: scroll; font-family: Arial, Helvetica, sans-serif;">
-                <div>Hello, Welcome to the chat</div>
+                <div>Game Chat</div>
             </div>
             <form id="chat-form">
                 <input type="text" name="chat-input" id="chat-input" style="width:500px;">

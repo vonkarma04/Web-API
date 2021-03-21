@@ -1,5 +1,5 @@
-{
-  "name": "staticserver",
+ {
+ "name": "week2",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
@@ -10,7 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "nodemon": "^2.0.7",
-    "socket.io": "^4.0.0"
+    "mongoose": "^5.11.13"
   }
 }

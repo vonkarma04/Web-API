@@ -77,9 +77,7 @@ var Player = function(id){
     self.update = function(){
         self.updateSpeed()
         playerUpdate()
-        // if(Math.random() < 0.1){
-        //     self.shoot(Math.random()*360)
-        // }
+    
         if(self.attack){
             self.shoot(self.mouseAngle)
         }
@@ -260,10 +258,7 @@ var Bullet = function(parent, angle){
 Bullet.list = {}
 
 Bullet.update = function(){
-    //randomly create bullet
-    //if(Math.random() < 0.1){
-    //    Bullet(Math.random()*360)
-    //}
+
     var pack = []
     for(var i in Bullet.list){
         var bullet = Bullet.list[i]
@@ -329,24 +324,11 @@ io.sockets.on('connection', function(socket){
     console.log('Socket connected')
 
     socket.id = Math.random()
-    //socket.x = 0
-    //socket.y = Math.floor(Math.random() * 600)
-    //socket.number = Math.floor(Math.random() * 10)
-    //add something to socket list
     SocketList[socket.id] = socket
 
 
     //logging in
     socket.on('signIn', function(data){
-        // if(isPasswordValid(data))
-        // {
-        //     Player.onConnect(socket)
-        //     socket.emit('connected', socket.id)
-        //     socket.emit('signInResponse', {success:true})
-
-        // }else{
-        //     socket.emit('signInResponse', {success:false})
-        // }
 
         isPasswordValid(data, function(res){
             if(res){
@@ -361,6 +343,12 @@ io.sockets.on('connection', function(socket){
         
     })
 
+    socket.on('newHighscore', function(data){
+        PlayerData.highscore = data
+        PlayerData.save
+        console.log("new highscore")
+    })
+
     //disconnection
     socket.on('disconnect', function(){
         delete SocketList[socket.id]
@@ -369,12 +357,6 @@ io.sockets.on('connection', function(socket){
 
     //signing up
     socket.on('signUp', function(data){
-        // if (isUsernameTaken(data)) {
-        //     socket.emit('signUpResponse', { success: false })
-        // } else {
-        //     addUser(data)
-        //     socket.emit('signUpResponse', { success: true })
-        // }
 
         isUsernameTaken(data, function(res){
             if(res){
@@ -403,12 +385,6 @@ io.sockets.on('connection', function(socket){
         socket.emit('evalResponse', res)
     })
 
-    // socket.on('sendMsg', function(data){
-    //     console.log(data.message)
-    // })
-    // socket.on('sendBtnMsg', function(data){
-    //     console.log(data.message)
-    // })
     
 })
 

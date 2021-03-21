@@ -42,269 +42,358 @@ socket.on('signUpResponse', function(data){
     
 })
 
-//game code
-var canvas = document.getElementById('canvas')
-var ctx = canvas.getContext('2d')
-var chatText = document.getElementById('chat-text')
-var chatInput = document.getElementById('chat-input')
-var chatForm = document.getElementById('chat-form')
-ctx.font = '30px Arial'
-var px = 0
-var py = 0
-var clientId
 
-var Sprites = {}
-Sprites.player = new Image
-Sprites.player.src = '/client/Socket Game Sprites/player.png'
-Sprites.fireball = new Image
-Sprites.fireball.src = '/client/Socket Game Sprites/Fireball.png'
-Sprites.map = new Image
-Sprites.map.src = '/client/Socket Game Sprites/Tilemap.png'
+//asteroid avoidance
+var c = window.document.querySelector("canvas");
+//var c = document.getElementById("canvas")
+var ctx = c.getContext("2d");
+var timer = requestAnimationFrame(main);
+var gravity = 1;
+var asteroids = new Array();
+var numAsteroids = 10;
+var gameOver = true;
+var score = 0;
+var gameStates = [];
+var currentState = 0;
+var ship;
+var highScore = 0;
+var bgMain = new Image();
+var cookieSprite = new Image();
+var highScoreElements = window.document.querySelector('.highscore');
 
-var drawMap = function(){
-    ctx.drawImage(Sprites.map, 0, 0, 800, 600)
+bgMain.src = "client/images/rocks.jpg";
+cookieSprite.src = "client/images/cookie.png";
+
+//event listener to trigger main when image is loaded
+bgMain.onload = function(){
+    main();
 }
 
-var drawScore = function(){
-    ctx.fillStyle = 'white'
-    ctx.fillText(Player.list[clientId].score, 10, 50)
-    ctx.fillStyle = 'black'
+cookieSprite.onload = function(){
+    main();
+}
+
+function randomRange(high, low){
+    return Math.random() * ( high - low) + low;
+}
+
+//Asteroids GameObject Class
+function Asteroids(){
+    this.radius = randomRange(15,2);
+    this.x = randomRange(0 + this.radius, c.width - this.radius); 
+    this.y = randomRange(0 + this.radius, c.height - this.radius)- c.height;
+    this.vx = randomRange(-5,-10);
+    this.vy = randomRange(10,5);
+    this.color = "white";
+
+    this.draw = function(){
+        ctx.save();
+        //draws original circles for asteroids
+        /*ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.arc(this.x,this.y, this.radius, 0, 2*Math.PI,true);
+        ctx.closePath();
+        ctx.fill();*/
+        ctx.drawImage(cookieSprite,this.x - this.radius,this.y-this.radius,this.radius*2, this.radius*2)
+        ctx.restore();
+
+    }
 }
 
 
-var Player = function(initPack){
-    var self = {}
-    self.id = initPack.id
-    self.number = initPack.number 
-    self.x = initPack.x
-    self.y = initPack.y
-    self.hp = initPack.hp
-    self.hpMax = initPack.hpMax
-    self.score = initPack.score
 
-    self.draw = function(){
-        var hpWidth = 30 * self.hp/self.hpMax
-        ctx.fillStyle = 'red'
-        ctx.fillRect(self.x - hpWidth/2, self.y - 50, hpWidth,5)
-        ctx.fillStyle = 'black'
-        //ctx.fillText(self.number, self.x, self.y)
-        //ctx.font = "20px Arial"
-        //ctx.fillText(self.score, self.x, self.y - 60)
-        //ctx.font = "30px Arial"
-        ctx.drawImage(Sprites.player, self.x - 10, self.y - 40, Sprites.player.width/4, Sprites.player.height/4)
+//class for player ship
+function PlayerShip(){
+    this.x = c.width/2;
+    this.y = c.height/2;
+    this.w = 20;
+    this.h = 20;
+    this.vx = 0;
+    this.vy = 0;
+    this.up = false;
+    this.left = false;
+    this.right = false;
+    this.flamelength = 30;
 
-    }
+    this.draw = function(){
+        ctx.save();
+        ctx.translate(this.x,this.y);
 
-    Player.list[self.id] = self
-    return self
-}
-Player.list = {}
-
-var Bullet = function(initPack){
-    var self = {}
-    self.id = initPack.id
-    self.number = initPack.number 
-    self.x = initPack.x
-    self.y = initPack.y
-
-    self.draw = function(){
-        //ctx.fillRect(self.x - 5, self.y - 5, 10,10)
-        ctx.drawImage(Sprites.fireball, self.x - 5, self.y - 5, 5, 10)
-
-    }
-
-    Bullet.list[self.id] = self
-    return self
-}
-Bullet.list = {}
-
-socket.on('init',function(data){
-    for(var i = 0; i < data.player.length; i++){
-        new Player(data.player[i])
-    }
-
-    for(var i = 0; i < data.bullet.length; i++){
-        new Bullet(data.bullet[i])
-    }
-})
-
-socket.on('update',function(data){
-    //sets player position
-    for(var i = 0; i < data.player.length; i++){
-        if(clientId == data.player[i].id)
-        {
-            px = data.player[i].x
-            py = data.player[i].y
+        // draws afterburner flame
+        if(this.up == true ||  this.left == true || this.right == true){
+            ctx.save();
+            //animate flame
+            if(this.flamelength == 30){
+                this.flamelength = 10;
+            }
+            else{
+                this.flamelength = 30;
+            }
+            ctx.beginPath();
+            ctx.fillStyle = "orange";
+            ctx.moveTo(0, this.flamelength);
+            ctx.lineTo(5, 5);
+            ctx.lineTo(-5, 5);
+            ctx.lineTo(0, this.flamelength);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
         }
-        var pack = data.player[i]
-        var p = Player.list[pack.id]
+        ctx.beginPath();
+        ctx.fillStyle = "red";
+        ctx.moveTo(0, -10);
+        ctx.lineTo(10, 10);
+        ctx.lineTo(-10, 10);
+        ctx.lineTo(0, -10);
+        ctx.closePath();
+        ctx.fill();
 
-        if(p){
-            if(pack.x !== undefined){
-                p.x = pack.x
-            }
-            if(pack.y !== undefined){
-                p.y = pack.y
-            }
-            if(pack.hp !== undefined){
-                p.hp = pack.hp
-            }
-            if(pack.hpMax !== undefined){
-                p.hpMax = pack.hpMax
-            }
-            if(pack.score !== undefined){
-                p.score = pack.score
-            }
+        ctx.restore();
+    }
+
+    this.move = function(){
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if(this.y > c.height - 10){
+            this.y = c.height - 10;
+            this.vy = 0;
         }
-        //ctx.fillText(data.player[i].number, data.player[i].x, data.player[i].y)
-    }
+        //right boundary of screen
+        if(this.x > c.width - 10 ){
+            this.x = c.width - 10;
+            this.vx = 0;
+        }
+        //left boundary of screen
+        if(this.x < 0 + 10 ){
+            this.x = 0 + 10;
+            this.vx = 0;
+        }
 
-    for(var i = 0; i < data.bullet.length; i++){
-        var pack = data.bullet[i]
-        var b = Bullet.list[pack.id]
-    
-        if(b){
-            if(pack.x !== undefined){
-                b.x = pack.x
-            }
-            if(pack.y !== undefined){
-                b.y = pack.y
-            }
+        //top boundary of screen
+        if(this.y < 0 + 10){
+            this.y = 0 + 10;
+            this.vy = 0;
         }
     }
-})
 
-socket.on('remove',function(data){
-    for(var i = 0; i < data.player.length; i++){
-        delete Player.list[data.player[i]]
-    }
-
-    for(var i = 0; i < data.bullet.length; i++){
-        delete Bullet.list[data.bullet[i]]
-    }
-})
-
-setInterval(function(){
-    ctx.clearRect(0, 0, 800, 600)
-    drawMap()
-    for(var i in Player.list){
-        //draw everything
-        Player.list[i].draw()
-    }
-    for(var i in Bullet.list){
-        //draw everything
-        Bullet.list[i].draw()
-    }
-    drawScore()
-}, 1000/30)
-
-socket.on('connected', function(data){
-    clientId = data
-    
-})
-
-//event listeners 
-document.addEventListener('keydown', keyPressDown)
-document.addEventListener('keyup', keyPressUp)
-document.addEventListener('mousedown', mouseDown)
-document.addEventListener('mouseup', mouseUp)
-document.addEventListener('mousemove', mouseMove)
-
-function keyPressDown(e){
-    if(e.keyCode === 87)//up
-        socket.emit('keypress', {inputId:'up', 
-    state:true})
-    else if(e.keyCode === 83)//down
-        socket.emit('keypress', {inputId:'down', 
-    state:true})
-    else if(e.keyCode === 65)//left
-        socket.emit('keypress', {inputId:'left', 
-    state:true})
-    else if(e.keyCode === 68)//right
-        socket.emit('keypress', {inputId:'right', 
-    state:true})
 }
+
+function gameStart() {
+    //for loop to create all instances of asteroids
+    for (var i = 0; i < numAsteroids; i++) {
+        asteroids[i] = new Asteroids();
+    }
+    //this creates an instance of the ship
+    ship = new PlayerShip();
+}
+
+
+
+//adding event listeners
+document.addEventListener("keydown", keyPressDown);
+document.addEventListener("keyup", keyPressUp);
 
 function keyPressUp(e){
-    if(e.keyCode === 87)//up
-        socket.emit('keypress', {inputId:'up', 
-    state:false})
-    else if(e.keyCode === 83)//down
-        socket.emit('keypress', {inputId:'down', 
-    state:false})
-    else if(e.keyCode === 65)//left
-        socket.emit('keypress', {inputId:'left', 
-    state:false})
-    else if(e.keyCode === 68)//right
-        socket.emit('keypress', {inputId:'right', 
-    state:false})
-}
-
-function mouseDown(e){
-    socket.emit('keypress', {inputId:'attack', 
-    state:true})
-}
-function mouseUp(e){
-    socket.emit('keypress', {inputId:'attack', 
-    state:false})
-}
-function mouseMove(e){
-    var x = -px + e.clientX - 8
-    var y = -py + e.clientY - 96
-    var angle = Math.atan2(y,x)/Math.PI*180
-    socket.emit('keypress', {inputId:'mouseAngle', 
-    state:angle})
-}
-
-// socket.on('newPositions', function(data){
-//     ctx.clearRect(0, 0, canvas.width, canvas.height)
-//     for(var i = 0; i < data.player.length; i++){
-//         if(clientId == data.player[i].id)
-//         {
-//             px = data.player[i].x
-//             py = data.player[i].y
-//         }
-//         ctx.fillText(data.player[i].number, data.player[i].x, data.player[i].y)
-//     }
-//     for(var i = 0; i < data.bullet.length; i++){
-//         ctx.fillRect(data.bullet[i].x + 5, data.bullet[i].y - 10, 10, 10)
-//         }
-// })
-
-socket.on('addToChat', function(data){
-    chatText.innerHTML += `<div>${data}</div>`
-})
-
-socket.on('evalResponse', function(data){
-    chatText.innerHTML += `<div>${data}</div>`
-    console.log(data)
-})
-
-chatForm.onsubmit = function(e){
-    e.preventDefault()
-
-    if(chatInput.value[0] === '/'){
-        socket.emit('evalServer', chatInput.value.slice(1))
-
-        
-    }else{
-        socket.emit('sendMessageToServer', chatInput.value)
+  //  console.log("Key released " + e.keyCode);
+    if(gameOver == false){
+        if(e.keyCode === 38){
+            ship.up = false;
+        }
+        if(e.keyCode === 37){
+            ship.left = false;
+        }
+        if(e.keyCode === 39){
+            ship.right = false;
+        }
     }
     
-    //clear out the input
-    chatInput.value = ""
 }
-//example from last week
-// var msg = function(){
-//     socket.emit('sendBtnMsg', {
-//         message:'Sending Message from button'
-//     })
 
-// }
+function keyPressDown(e){
+    //console.log("Key pressed " + e.keyCode);
+    if(gameOver == false){
+        if(e.keyCode === 38){
+            ship.up = true;
+        }
 
-// socket.emit('sendMsg', {
-//     message:'Hello Ronny, I am logged in'
-// })
-// socket.on('messageFromServer', function(data){
-//     console.log(data.message)
-// })
+        if(e.keyCode === 37){
+            ship.left = true;
+        }
+        if(e.keyCode === 39){
+            ship.right = true;
+        }
+    }
+    if (gameOver == true) {
+        if (e.keyCode === 13) {
+
+            if(currentState == 2){
+                currentState = 0;
+                score = 0;
+                numAsteroids = 10;
+                asteroids = [];
+                gameStart();
+                main();
+            }
+            else{
+                gameStart();
+                gameOver = false;
+                currentState = 1;
+                main();
+                scoreTimer();
+            }
+            
+        }
+    }
+}
+
+//GameStates state machine. This is what sets up menu screens and main agme scene
+
+//---Main Menu---
+gameStates[0] = function(){
+    highScoreElements.style.display = "none";
+    ctx.drawImage(bgMain,0,0,c.width,c.height);
+    ctx.save();
+    ctx.font = "30px Arial";
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center"
+    ctx.fillText("Asteroid Avoidance", c.width/2, c.height/2 - 30);
+    ctx.font = "15px Arial";
+    ctx.fillText("Press Enter to Start", c.width/2, c.height/2 + 20);
+    ctx.restore();
+}
+
+//---Game Scene---
+gameStates[1] = function(){
+    //Draws score to the HUD
+    ctx.save();
+    ctx.font = "15px Arial";
+    ctx.fillStyle = 'black';
+    ctx.fillText("Score: " + score.toString(), c.width - 150, 30);
+    ctx.restore();
+    
+
+    //ship.vy += gravity;
+
+    //Key presses move the ship
+    if(ship.up == true){
+        ship.vy = -10;
+    }
+    else{
+        ship.vy = 3;
+    }
+
+    if(ship.left == true){
+        ship.vx = -3;
+    }
+    else if(ship.right == true){
+        ship.vx = 3;
+    }
+    else{
+        ship.vx = 0;
+    }
+    // loops through asteroid instances in array and draws them to the screen
+    for(var i = 0; i<asteroids.length; i++){
+        var dX = ship.x - asteroids[i].x;
+        var dY = ship.y - asteroids[i].y;
+        var dist = Math.sqrt((dX*dX)+(dY*dY));
+
+        //checks for collision between asteroid and ship
+        if(detectCollision(dist, (ship.h/2 + asteroids[i].radius))){
+           // console.log("Colliding with asteroid " + i);
+            
+            currentState = 2;
+            gameOver = true;
+            //document.removeEventListener("keydown", keyPressDown);
+            //document.removeEventListener("keyup", keyPressUp);
+        }
+
+        //recycles asteroids
+        if(asteroids[i].y > c.height + asteroids[i].radius){
+            asteroids[i].y = randomRange(c.height -asteroids[i].radius,asteroids[i].radius)-c.height;
+            asteroids[i].x = randomRange(c.width + asteroids[i].radius,asteroids[i].radius);
+        }
+
+        if(gameOver == false){
+            asteroids[i].y += asteroids[i].vy;
+        }
+
+        asteroids[i].draw();
+    }
+    
+    ship.draw();
+    if(gameOver == false){
+        ship.move();
+    }
+
+    while(asteroids.length < numAsteroids){
+        asteroids.push(new Asteroids());
+    }
+}
+
+//---Game Over Screen---
+gameStates[2] = function(){
+    highScoreElements.style.display = "block";
+    if(score > highScore){
+        highScore = score;
+        ctx.save();
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center"
+        ctx.fillText("Game Over, Your score was: " + score.toString(), c.width/2, c.height/2 - 60);
+        ctx.fillText("Your New High Score is: " + highScore.toString() , c.width/2, c.height/2 - 30);
+        ctx.fillText("New Record!!", c.width/2, c.height/2 );
+        ctx.font = "15px Arial";
+        ctx.fillText("Press Enter to Start", c.width/2, c.height/2 + 20);
+        ctx.restore();
+        socket.emit("newHighscore", highScore.toString())
+
+    }
+    else{
+        ctx.save();
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center"
+        ctx.fillText("Game Over, Your score was: " + score.toString(), c.width/2, c.height/2 - 60);
+        ctx.fillText("Your high Score is: " + highScore.toString(), c.width/2, c.height/2 - 30);
+        ctx.font = "15px Arial";
+        ctx.fillText("Press Enter to Start", c.width/2, c.height/2 + 20);
+        ctx.restore();
+    }
+
+    
+}
+
+
+//---Main Game Loop---
+function main() {
+    ctx.clearRect(0, 0, c.width, c.height);
+   
+    if (gameOver == false) {
+        timer = requestAnimationFrame(main);
+    }
+    gameStates[currentState]();
+}
+
+
+//---Collision Detection Function---
+function detectCollision(distance, calcDistance){
+    return distance < calcDistance;
+}
+
+
+//--Score Timer Function---
+function scoreTimer(){
+    if(gameOver == false){
+        score++;
+        //using modulus divide the score by 5 and inf the remainder is zero addastteroids
+        if(score % 5 == 0){
+            numAsteroids += 5;
+            console.log(numAsteroids);
+        }
+       // console.log(score);
+        setTimeout(scoreTimer, 1000);
+    }
+}
+
+

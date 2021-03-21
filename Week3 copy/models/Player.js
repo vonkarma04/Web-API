@@ -9,6 +9,10 @@ var PlayerSchema = new Schema({
     password:{
         type:String,
         required:true
+    },
+    highscore:{
+        type:String, 
+        required:true
     }
 })
 
